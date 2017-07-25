@@ -14,6 +14,7 @@ from keras.layers import Convolution2D, MaxPooling2D, Dropout
 from keras.models import load_model
 import keras.optimizers
 import glob
+import sys, getopt
 
 from skimage import exposure
 
@@ -130,10 +131,13 @@ def load():
     p.write()
     return p.X_train, p.Y_train
 
-def get_model():
+def get_model(train=True):
   if Path('model.h5').is_file():
     return load_model('model.h5')
   else:
+    if (not train):
+      return False
+
     X_train, Y_train = load()
     X_train = np.array(X_train)
     Y_train = np.array(Y_train)
@@ -247,7 +251,7 @@ class Tester:
   def test_image(self, img):
     img = crop_center(img, 700, 700, 00,-100)
     img = np.array(preprocess(img, False))
-    self.predict_color(img)
+    return self.predict_color(img)
     # plt.imshow(img)
     # plt.show()
 
@@ -266,53 +270,49 @@ def test_images(model):
     img = cv2.cvtColor(cv2.imread(i), cv2.COLOR_BGR2RGB)
     print('Testing {}'.format(i))
     tester.test_image(img)
+
+def picamera_loop(model):
+  import time
+  import picamera
+  import picamera.array
+  tester = Tester(model)
+  with picamera.PiCamera() as camera:
+    camera.resolution = (1920, 1080)
+    camera.start_preview()
+    # Camera warm-up time
+    time.sleep(2)
+    while (True):
+      with picamera.array.PiRGBArray(camera) as stream:
+        camera.capture(stream, format='bgr')
+        # At this point the image is available as stream.array
+        image = stream.array
+        print(tester.test_image(image))
+      time.sleep(0.5)
+
+
+def main(argv):
+  try:
+    opts, args = getopt.getopt(argv, "ct")
+  except getopt.GetoptError:
+    print("Please specify -c or -t")
+    sys.exit(2)
+
+  if (len(opts) == 0):
+    print('please specify -c or -t')
+    sys.exit(2)
+
+  for opt, arg in opts:
+    if opt == '-tt':
+      model = get_model()
+      test(model, 'testVideos/test_blue_yellow.mp4')
+      # test_images(model)
+      del model
+    elif opt == '-c':
+      model = get_model(False)
+      if (model == False):
+        print('A client with no model... like a boy who wanders in the forest')
+        sys.exit(2)
+      picamera_loop(model)
+
 if __name__ == "__main__":
-  model = get_model()
-  test(model,'test_blue_yellow.mp4')
-  #test_images(model)
-  del model
-
-"""
-  input = np.empty((3,150,200,3))
-  red = np.array(preprocess(cv2.imread('Red.jpg')))
-  red = cv2.cvtColor(red, cv2.COLOR_RGB2BGR)
-  #plt.imshow(red)
-  #plt.show()
-  red = red / 255.0
-  input[0,:,:,:] = red
-
-  red = np.array(preprocess(cv2.imread('Yellow.jpg')))https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&ved=0ahUKEwjTw_L3mJzVAhUFl1QKHSFWBc4QFgg1MAI&url=https%3A%2F%2Fgithub.com%2Ffchollet%2Fkeras%2Fissues%2F2743&usg=AFQjCNGQ6NuSwACM7kqQEHcaVd1-R7mVnA
-  red = cv2.cvtColor(red, cv2.COLOR_RGB2BGR)
-  #plt.imshow(red)
-  #plt.show()
-  red = red / 255.0
-  input[1, :, :, :] = red
-
-  red = np.array(preprocess(cv2.imread('Blue.jpg')))
-  red = cv2.cvtColor(red, cv2.COLOR_RGB2BGR)
-  #plt.imshow(red)
-  red = red / 255.0
-  input[2, :, :, :] = red
-
-  out = model.predict(input)
-  out = out > 0.5
-  print('Model predicted {}'.format(out))
-  dict = ['blue','none','red','yellow']
-  for i in range(3):
-    o = np.where(out[i])
-    print('{}th picture is {}'.format(i, dict[o[0][0]]))
-"""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  main(sys.argv[1:])
