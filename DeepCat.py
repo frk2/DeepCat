@@ -282,13 +282,18 @@ def picamera_loop(model):
     # Camera warm-up time
     time.sleep(2)
     while (True):
-      with picamera.array.PiRGBArray(camera) as stream:
-        camera.capture(stream, format='bgr')
-        # At this point the image is available as stream.array
-        image = stream.array
-        print(tester.test_image(image))
-      time.sleep(0.5)
+      images = []
+      for i in range(10):
+        with picamera.array.PiRGBArray(camera) as stream:
+          camera.capture(stream, format='bgr')
+          # At this point the image is available as stream.array
+          image = stream.array
+          images.append(image)
+        time.sleep(0.2)
 
+      print('evaluating batch')
+      for image in images:
+        print(tester.test_image(image))
 
 def main(argv):
   try:
