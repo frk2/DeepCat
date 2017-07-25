@@ -249,7 +249,7 @@ class Tester:
       return None
 
   def test_image(self, img):
-    img = crop_center(img, 700, 700, 00,-100)
+    img = crop_center(img, 600, 600)
     img = np.array(preprocess(img, False))
     return self.predict_color(img)
     # plt.imshow(img)
@@ -277,17 +277,18 @@ def picamera_loop(model):
   import picamera.array
   tester = Tester(model)
   with picamera.PiCamera() as camera:
-    camera.resolution = (1920, 1080)
+    #camera.resolution = (1920, 1080)
     camera.start_preview()
+    camera.hflip=True
     # Camera warm-up time
     time.sleep(2)
     while (True):
       with picamera.array.PiRGBArray(camera) as stream:
-        camera.capture(stream, format='bgr')
+        camera.capture(stream, format='rgb')
         # At this point the image is available as stream.array
         image = stream.array
         print(tester.test_image(image))
-      time.sleep(0.5)
+      time.sleep(0.1)
 
 
 def main(argv):
