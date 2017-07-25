@@ -237,7 +237,7 @@ class Tester:
 
   def predict_color(self, img):
     img = img.reshape((1,) + img.shape)
-    out = model.predict(img)[0]
+    out = self.model.predict(img)[0]
     # dict = ['blue','red','yellow']
     dict = ['blue', 'none', 'red', 'yellow']
     o = np.where(out == max(out))
