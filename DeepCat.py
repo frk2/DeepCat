@@ -144,6 +144,7 @@ def gen_preprocess(x):
   return preprocess_input(x)
 
 def get_model(train=True):
+  """
   datagen = ImageDataGenerator(
     rotation_range=0,
     width_shift_range=0.3,
@@ -172,13 +173,14 @@ def get_model(train=True):
     target_size=IMG_SIZE,
     class_mode='categorical'
   )
+  """
 
 
   if Path('model.h5').is_file():
     model = load_model('model.h5')
     print(model.metrics_names)
     # print(model.evaluate_generator(valid_generator, steps=100))
-    print(model.evaluate_generator(test_generator, steps=50))
+    # print(model.evaluate_generator(test_generator, steps=50))
     return model
   else:
     if (not train):
@@ -355,7 +357,7 @@ def picamera_loop(model):
   import picamera.array
   tester = Tester(model)
   with picamera.PiCamera() as camera:
-    #camera.resolution = (1920, 1080)
+    camera.resolution = (1920, 1080)
     camera.start_preview()
     camera.hflip=True
     # Camera warm-up time
