@@ -1,2 +1,6 @@
 *.mp4
 *.p
+train_data/
+valid_data/
+test_data/
+__pycache__

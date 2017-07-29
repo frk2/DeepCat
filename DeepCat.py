@@ -12,7 +12,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D, Dropout, GlobalAveragePooling2D
 from keras.models import load_model, Model
-from keras.callbacks import  EarlyStopping, ModelCheckpoint
+from keras.callbacks import  EarlyStopping, ModelCheckpoint, LambdaCallback
 import keras.optimizers
 import glob
 import sys, getopt
@@ -144,13 +144,16 @@ def gen_preprocess(x):
   return preprocess_input(x)
 
 def get_model(train=True):
-  """
+
+  if Path('model.h5').is_file():
+    return load_model('model.h5')
+
   datagen = ImageDataGenerator(
-    rotation_range=0,
-    width_shift_range=0.3,
-    height_shift_range=0.4,
-    shear_range=0.0,
-    zoom_range=0.3,
+    rotation_range=10,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.1,
+    zoom_range=0.2,
     horizontal_flip=False,
     preprocessing_function=gen_preprocess,
     fill_mode='nearest')
@@ -165,119 +168,117 @@ def get_model(train=True):
   valid_generator = validgen.flow_from_directory(
     directory='valid_data/',
     target_size=IMG_SIZE,
-    class_mode='categorical'
+    class_mode='categorical',
+    shuffle=False
   )
 
   test_generator = validgen.flow_from_directory(
     directory='test_data/',
     target_size=IMG_SIZE,
-    class_mode='categorical'
+    class_mode='categorical',
+    shuffle=False
   )
-  """
+
+  model = SqueezeNet()
+  print(model.summary())
+  # x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-5].output)
+  # x = Activation('relu', name='relu_conv10')(x)
+  # x = GlobalAveragePooling2D()(x)
+  # x= Dense(4, activation='softmax')(x)
+  x = Dense(4, activation='softmax')(model.layers[-2].output)
+  model = Model(model.inputs, x)
+  print(model.summary())
 
 
-  if Path('model.h5').is_file():
-    model = load_model('model.h5')
-    print(model.metrics_names)
-    # print(model.evaluate_generator(valid_generator, steps=100))
-    # print(model.evaluate_generator(test_generator, steps=50))
-    return model
-  else:
-    if (not train):
-      return False
+  # # 5th Layer - Add a ReLU activation layer
+  # model.add(Activation('softmax'))
 
-    X_train, Y_train, total = load()
-    # X_train = np.array(X_train)
-    Y_train = np.array([x.decode() for x in Y_train[:total]])
-    fit = LabelBinarizer().fit(Y_train)
-    Y_train = fit.transform(Y_train)
-    # X_train = X_train.reshape(X_train.shape + (1,))
-    # X_train, Y_train = shuffle(X_train, Y_train)
+  # model = Sequential()
+  #
+  # model.add(Convolution2D(16, 3, 3,
+  #                         border_mode='same',
+  #                         input_shape=IMG_SHAPE))
+  # model.add(MaxPooling2D(pool_size=(3, 3)))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # model.add(Convolution2D(32, 3, 3,
+  #                         border_mode='same'))
+  # model.add(MaxPooling2D(pool_size=(3, 3)))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # model.add(Convolution2D(48, 3, 3,
+  #                         border_mode='same'))
+  # model.add(MaxPooling2D(pool_size=(2, 2)))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  # #
+  # model.add(Convolution2D(64, 3, 3,
+  #                         border_mode='same'))
+  # model.add(MaxPooling2D(pool_size=(2, 2)))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  # #
+  # model.add(Convolution2D(64, 3, 3,
+  #                         border_mode='same'))
+  # model.add(MaxPooling2D(pool_size=(2, 2)))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # # 1st Layer - Add a flatten layer
+  # model.add(Flatten())
+  #
+  # model.add(Dense(1164))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # model.add(Dense(128))
+  # model.add(Activation('tanh'))
+  # model.add(Dropout(0.2))
+  #
+  # # 2nd Layer - Add a fully connected layer
+  # model.add(Dense(50))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # model.add(Dense(10))
+  # model.add(Activation('relu'))
+  # model.add(Dropout(0.2))
+  #
+  # # 4th Layer - Add a fully connected layer
+  # model.add(Dense(4))
+  # # 5th Layer - Add a ReLU activation layer
+  # model.add(Activation('softmax'))
+  # TODO: Build a Multi-layer feedforward neural network with Keras here.
+  # TODO: Compile and train the model
+  filepath = "weights-improvement-{epoch:02d}-{loss:.2f}.hdf5"
+  callbacks = [
+    EarlyStopping(monitor='loss', min_delta=0.01, patience=2, verbose=1),
+    LambdaCallback(on_epoch_end=lambda batch,logs: evaluate_model(model, test_generator)),
+    ModelCheckpoint(filepath=filepath, monitor='loss', save_best_only=True, verbose=1),
+  ]
 
-    # X_train, X_test, Y_train, Y_test = train_test_split(X_train, Y_train,test_size=0.33, random_state=42)
+  model.compile(keras.optimizers.Adam(lr=0.0001), 'categorical_crossentropy', ['accuracy'])
+  model.fit_generator(data_generator, steps_per_epoch=100, epochs=30, verbose=1, callbacks=callbacks)
+  evaluate_model(model, test_generator)
 
-    model = SqueezeNet()
-    print(model.summary())
-    x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-4].output)
-    x = Activation('relu', name='relu_conv10')(x)
-    x = GlobalAveragePooling2D()(x)
-    x= Dense(4, activation='softmax')(x)
-    model = Model(model.inputs, x)
-    print(model.summary())
-    # # 5th Layer - Add a ReLU activation layer
-    # model.add(Activation('softmax'))
+  model.save('model.h5', True)
 
-    # model = Sequential()
-    #
-    # model.add(Convolution2D(16, 3, 3,
-    #                         border_mode='same',
-    #                         input_shape=IMG_SHAPE))
-    # model.add(MaxPooling2D(pool_size=(3, 3)))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # model.add(Convolution2D(32, 3, 3,
-    #                         border_mode='same'))
-    # model.add(MaxPooling2D(pool_size=(3, 3)))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # model.add(Convolution2D(48, 3, 3,
-    #                         border_mode='same'))
-    # model.add(MaxPooling2D(pool_size=(2, 2)))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    # #
-    # model.add(Convolution2D(64, 3, 3,
-    #                         border_mode='same'))
-    # model.add(MaxPooling2D(pool_size=(2, 2)))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    # #
-    # model.add(Convolution2D(64, 3, 3,
-    #                         border_mode='same'))
-    # model.add(MaxPooling2D(pool_size=(2, 2)))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # # 1st Layer - Add a flatten layer
-    # model.add(Flatten())
-    #
-    # model.add(Dense(1164))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # model.add(Dense(128))
-    # model.add(Activation('tanh'))
-    # model.add(Dropout(0.2))
-    #
-    # # 2nd Layer - Add a fully connected layer
-    # model.add(Dense(50))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # model.add(Dense(10))
-    # model.add(Activation('relu'))
-    # model.add(Dropout(0.2))
-    #
-    # # 4th Layer - Add a fully connected layer
-    # model.add(Dense(4))
-    # # 5th Layer - Add a ReLU activation layer
-    # model.add(Activation('softmax'))
-    # TODO: Build a Multi-layer feedforward neural network with Keras here.
-    # TODO: Compile and train the model
-    callbacks = [
-      EarlyStopping(monitor='loss', min_delta=0.005, patience=2, verbose=1),
-      # ModelCheckpoint(kfold_weights_path, monitor='val_loss', save_best_only=True, verbose=0),
-    ]
+  return model
 
-
-    model.compile(keras.optimizers.Adam(lr=0.0005), 'categorical_crossentropy', ['accuracy'])
-    # history = model.fit(X_train, y_one_hot, batch_size=256, nb_epoch=20, validation_split=0.2, verbose=1, shuffle=True, callbacks=callbacks)
-    model.fit_generator(data_generator, steps_per_epoch=300, epochs=30, verbose=1, callbacks=callbacks, validation_data=test_generator, validation_steps=50)
-    model.save('model.h5', True)
-
-    return model
+def evaluate_model(model, generator):
+  from sklearn.metrics import accuracy_score
+  steps = 0
+  scores = []
+  for i in generator:
+    y_pred = model.predict(x=i[0])
+    y_pred = y_pred > 0.6
+    scores.append(accuracy_score(i[1], y_pred))
+    steps += 1
+    if (steps > 29):
+      break
+  print("Model score is: {}".format(sum(scores)/len(scores)))
 
 def Xgen(all_images, all_labels, batch_size, total):
   while True:
@@ -333,7 +334,6 @@ class Tester:
     # plt.show()
     img = np.array(preprocess(img))
     return self.predict_color(img)
-    return img
 
 def test(model, testfile):
   print('Starting test on {}'.format(testfile))
@@ -345,7 +345,7 @@ def test(model, testfile):
 
 def test_images(model):
   tester = Tester(model)
-  images = glob.glob("testImages/*")
+  images = glob.glob("test_data/*/*")
   for i in images:
     img = cv2.cvtColor(cv2.imread(i), cv2.COLOR_BGR2RGB)
     print('Testing {}'.format(i))
