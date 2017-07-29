@@ -48,6 +48,9 @@ x = GlobalAveragePooling2D()(x)
 x = Activation('softmax')(x)
 model = Model(model.inputs, x)
 ```
+
+Give me 95% Test accuracy. Seems to initially work better.
+
 This was inspired by the fact that Squeezenet has the last convnet generally the size of classes. I'm not sure if this is a sensible approach but seems to work. Does it make sense to use weights of a pretrained model and yank an entire layer this way? Please tell me!
 
 The jury is still out which is better. 
@@ -73,6 +76,10 @@ def evaluate_model(model, generator):
 
 So given a model and a test generator, this guy will calculate your prediction and compare to the truth. The classification is chosen if >60% of the softmax probability is in your favor. Saved my life. Before this everything called accuracy was a lie! (Or I dont understand how keras accuracy works)
 
+- Balancing was important since for some I kept producing way more blue and yellow frames than 'none' or red frames. I had to manually get rid of blue/yellow frames to bring it to par. I got rid of 'bad' images like ones where one of the lights was cut off etc.
+
+- Checkpointing. It was super crazy easy to start overfitting, sometimes even after the first epoch! Going back to earlier models that showed high test accuracy was always way superior than a later overfitted model.
+
 ## What didn't work
 Well a lot of stuff. Here goes:
 
@@ -82,14 +89,8 @@ Well a lot of stuff. Here goes:
 
 - Using color balacing to negate the effects of illumination. I tried using equalize_adapthist on the training set and all it did was slow the entire thing down. This was to combat training data gathered in sunlight vs testing data gather later in the day in warm LED light.
 
-- Crop the image to focus always on the lights. This worked, except it super duper overfit the model to expect images in exactly that distance, captured at exactly that resolution.
+- Cropping the image to focus always on the lights. This worked, except it super duper overfit the model to expect images in exactly that distance, captured at exactly that resolution.
 
 - Augmenting yourself. Too painful, just use ImageDataGenerator! Its free!
 
-
-
-## Other random problems faced
 - I quickly realized that lighting had a big role to play so if I trained my classifier in daylight it would perform poorly at night when my yellow warm LED lighting would come on. So I decided to feed it in some data with the yellow light shining as well to help it generalize. I tried using equalize_adapthist to fix the lightning situation but couldn't find any easy way to completely remove it from the picture. If anyone knows how to, please let me know!
-- Balancing was important since for some I kept producing way more blue and yellow frames than 'none' or red frames. I had to manually get rid of blue/yellow frames to bring it to par. I got rid of 'bad' images like ones where one of the lights was cut off etc.
-
-
