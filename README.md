@@ -94,3 +94,8 @@ Well a lot of stuff. Here goes:
 - Augmenting yourself. Too painful, just use ImageDataGenerator! Its free!
 
 - I quickly realized that lighting had a big role to play so if I trained my classifier in daylight it would perform poorly at night when my yellow warm LED lighting would come on. So I decided to feed it in some data with the yellow light shining as well to help it generalize. I tried using equalize_adapthist to fix the lightning situation but couldn't find any easy way to completely remove it from the picture. If anyone knows how to, please let me know!
+
+## The end game
+I deployed everything to my raspberry pi and it was fairly simple to get everything (including tensorflow with keras) going. Here's my contraption uglily glued to the litter robot with a flex camera mount thing I got on amazon:
+
+![alt text](testImages/final.jpeg "Final")
