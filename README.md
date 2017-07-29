@@ -99,3 +99,7 @@ Well a lot of stuff. Here goes:
 I deployed everything to my raspberry pi and it was fairly simple to get everything (including tensorflow with keras) going. Here's my contraption uglily glued to the litter robot with a flex camera mount thing I got on amazon:
 
 ![alt text](testImages/final.jpeg "Final")
+
+The cat doesn't seem to mind too much (so far!)
+
+
