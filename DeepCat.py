@@ -181,11 +181,12 @@ def get_model(train=True):
 
   model = SqueezeNet()
   print(model.summary())
-  # x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-5].output)
-  # x = Activation('relu', name='relu_conv10')(x)
-  # x = GlobalAveragePooling2D()(x)
+  x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-5].output)
+  x = Activation('relu', name='relu_conv11')(x)
+  x = GlobalAveragePooling2D()(x)
+  x = Activation('softmax')(x)
   # x= Dense(4, activation='softmax')(x)
-  x = Dense(4, activation='softmax')(model.layers[-2].output)
+  # x = Dense(4, activation='softmax')(model.layers[-2].output)
   model = Model(model.inputs, x)
   print(model.summary())
 
@@ -260,7 +261,7 @@ def get_model(train=True):
   ]
 
   model.compile(keras.optimizers.Adam(lr=0.0001), 'categorical_crossentropy', ['accuracy'])
-  model.fit_generator(data_generator, steps_per_epoch=100, epochs=30, verbose=1, callbacks=callbacks)
+  model.fit_generator(data_generator, steps_per_epoch=400, epochs=30, verbose=1, callbacks=callbacks)
   evaluate_model(model, test_generator)
 
   model.save('model.h5', True)
