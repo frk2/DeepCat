@@ -357,24 +357,26 @@ def picamera_loop(model):
   import picamera
   import picamera.array
   tester = Tester(model)
-  with picamera.PiCamera() as camera:
-    camera.resolution = (1920, 1080)
+  with picamera.PiCamera(resolution=(1280,720)) as camera:
     camera.start_preview()
     camera.hflip=True
     # Camera warm-up time
     time.sleep(2)
+    v=0
     while (True):
       images = []
-      for i in range(10):
+      for i in range(20):
         with picamera.array.PiRGBArray(camera) as stream:
-          camera.capture(stream, format='rgb')
+          camera.capture(stream, format='rgb',use_video_port=True)
           # At this point the image is available as stream.array
           image = stream.array
           images.append(image)
-        time.sleep(0.2)
 
       print('evaluating batch')
       for image in images:
+        #img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        #cv2.imwrite('out/meow{}.jpg'.format(v), img)
+        v += 1
         print(tester.test_image(image))
 
 def main(argv):
