@@ -362,6 +362,7 @@ def picamera_loop(model):
     camera.hflip=True
     # Camera warm-up time
     time.sleep(2)
+    v=0
     while (True):
       images = []
       for i in range(10):
@@ -370,6 +371,8 @@ def picamera_loop(model):
           # At this point the image is available as stream.array
           image = stream.array
           images.append(image)
+          cv2.imwrite('out/now{}.jpg'.format(v), image)
+          v += 1
         time.sleep(0.2)
 
       print('evaluating batch')
