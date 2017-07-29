@@ -149,11 +149,11 @@ def get_model(train=True):
     return load_model('model.h5')
 
   datagen = ImageDataGenerator(
-    rotation_range=0,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.0,
-    zoom_range=0.1,
+    rotation_range=10,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.1,
+    zoom_range=0.2,
     horizontal_flip=False,
     preprocessing_function=gen_preprocess,
     fill_mode='nearest')
@@ -181,10 +181,11 @@ def get_model(train=True):
 
   model = SqueezeNet()
   print(model.summary())
-  x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-5].output)
-  x = Activation('relu', name='relu_conv10')(x)
-  x = GlobalAveragePooling2D()(x)
-  x= Dense(4, activation='softmax')(x)
+  # x = Convolution2D(4, (1, 1), padding='same', name='conv11')(model.layers[-5].output)
+  # x = Activation('relu', name='relu_conv10')(x)
+  # x = GlobalAveragePooling2D()(x)
+  # x= Dense(4, activation='softmax')(x)
+  x = Dense(4, activation='softmax')(model.layers[-2].output)
   model = Model(model.inputs, x)
   print(model.summary())
 
