@@ -32,11 +32,19 @@ from skimage import exposure
 
 from tqdm import tqdm
 
+def resize_all(imgs):
+  new_shape = (imgs.shape[0],) + IMG_SIZE[::-1] + (imgs.shape[3],)
+  ret_imgs = np.zeros(new_shape)
+  for i in range(len(imgs)):
+    ret_imgs[i] = cv2.resize(imgs[i], IMG_SIZE[::-1])
+  return ret_imgs
+
 def preprocess(img):
 
   # img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
   # img = img[:, :, 2]
   img = cv2.resize(img, IMG_SIZE[::-1])
+
   img = np.expand_dims(img, axis=0)
   return preprocess_input(img.astype(np.float32))
 
@@ -111,6 +119,33 @@ class Processor:
     # self.x_dataset.resize(final_size)
     # self.y_dataset.resize(self.total_count)
     self.h5f.close()
+
+
+def detect_pattern(compressed, pattern, threshold = 3):
+  for i in range(len(compressed)):
+    match = True
+    for j in range(len(pattern)):
+      curr_match = compressed[i+j][0] == pattern[j] and compressed[i+j][1] > threshold
+      match = match and curr_match
+    if match:
+      return match
+  return False
+
+
+
+def compress(classifications):
+  compressed = []
+  current_class = ""
+  last_counter = 0
+  for classif in classifications:
+    if classif == current_class:
+      last_counter += 1
+    else:
+      if last_counter != 0:
+        compressed.append((current_class, last_counter))
+      current_class = classif
+      last_counter = 1
+  return compressed
 
 def load():
   if Path('train.h5').is_file():
@@ -268,6 +303,9 @@ def get_model(train=True):
 
   return model
 
+def get_brightness(img):
+  hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+  hist = cv2.calcHist(hsv[:,:,2])
 def evaluate_model(model, generator):
   from sklearn.metrics import accuracy_score
   steps = 0
@@ -317,31 +355,39 @@ class Tester:
       print('found colors {}'.format(found_colors))
 
 
-  def predict_color(self, img):
-    out = self.model.predict(img)[0]
-    # dict = ['blue','red','yellow']
-    dict = ['blue', 'none', 'red', 'yellow']
-    o = np.where(out == max(out))
-    if (len(o[0]) > 0 and max(out) > 0.75):
-      print('picture is {}, {}'.format(dict[o[0][0]], out))
-      return dict[o[0][0]]
-    else:
-      print('weak solution {}'.format(out))
-      return None
+  def predict_color(self, imgs):
+    if (len(imgs.shape) < 4):
+      imgs.reshape((1,) + imgs.shape)
 
-  def test_image(self, img):
-    # img = crop_center(img, 0, 0, 1000,1000)
-    # plt.imshow(img)
-    # plt.show()
-    img = np.array(preprocess(img))
-    return self.predict_color(img)
+
+    predictions = self.model.predict(imgs)
+
+    # dict = ['blue','red','yellow']
+    classifications = []
+    for out in predictions:
+      dict = ['blue', 'none', 'red', 'yellow']
+      o = np.where(out == max(out))
+      if (len(o[0]) > 0 and max(out) > 0.75):
+        print('picture is {}, {}'.format(dict[o[0][0]], out))
+        classifications.append(dict[o[0][0]])
+      else:
+        print('weak solution {}'.format(out))
+    return classifications
+
+  def test_images(self, imgs):
+
+    return self.predict_color(preprocess_input(resize_all(imgs)))
 
 def test(model, testfile):
   print('Starting test on {}'.format(testfile))
   clip = VideoFileClip(testfile)
   tester = Tester(model)
+  images = []
   for image in clip.iter_frames():
-    tester.test_image(image)
+    images.append(image)
+  compressed = compress(tester.test_images(np.array(images).astype(np.float32)))
+  print(compressed)
+  print(detect_pattern(compressed, ['blue','none','blue']))
   print('**********************************')
 
 def test_images(model):
@@ -357,7 +403,7 @@ def picamera_loop(model):
   import picamera
   import picamera.array
   tester = Tester(model)
-  with picamera.PiCamera(resolution=(1280,720)) as camera:
+  with picamera.PiCamera(resolution=(227,227)) as camera:
     camera.start_preview()
     camera.hflip=True
     # Camera warm-up time
@@ -373,11 +419,17 @@ def picamera_loop(model):
           images.append(image)
 
       print('evaluating batch')
-      for image in images:
-        #img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        #cv2.imwrite('out/meow{}.jpg'.format(v), img)
-        v += 1
-        print(tester.test_image(image))
+      compressed_classifications = compress(tester.test_images(images))
+      print(compressed_classifications)
+
+      if (detect_pattern(compressed_classifications,['blue','none','blue'])):
+        print('blue is blinking!')
+        tweet("I'm full! Kitty poops too much")
+
+      if (detect_pattern(compressed_classifications,['red','red','red'])):
+        print('red is on')
+        tweet('haha kitty just pooped', 900)
+
 
 def main(argv):
   try:
@@ -406,6 +458,25 @@ def main(argv):
         print('A client with no model... like a boy who wanders in the forest')
         sys.exit(2)
       picamera_loop(model)
+
+last_tweet_sent = 0
+def tweet(message, grace_period=3600):
+  if (time.time() - last_tweet_sent < grace_period):
+    print('not tweeting {} cuz itll be spammy'.format(message))
+    return
+  import twython
+  consumer_key = 'CllP5852kM2hdenx1yRB4g3Pw'
+  consumer_secret = 'LeT0CcYWiD9K2eRrPR3PuoYuJI59ucDAA18ElVkr5S6C5sAa1y'
+  access_token = '891839353843875840-MzhoGUQAwwcFP5CUo71qb42bq15CF6r'
+  access_token_secret = 'kjKnPvVCQbPNfpti1V1J70MW0LocE239EBSnbva4eQXJq'
+  twitter = twython.Twython(
+    consumer_key,
+    consumer_secret,
+    access_token,
+    access_token_secret
+  )
+  twitter.update_status(status=message)
+  last_tweet_sent = time.time()
 
 if __name__ == "__main__":
   main(sys.argv[1:])
