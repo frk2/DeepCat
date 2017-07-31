@@ -405,6 +405,7 @@ def picamera_loop(model):
   import picamera
   import picamera.array
   tester = Tester(model)
+  tweeter = Tweeter()
   with picamera.PiCamera(resolution=(227,227)) as camera:
     camera.start_preview()
     camera.hflip=True
@@ -426,11 +427,11 @@ def picamera_loop(model):
 
       if (detect_pattern(compressed_classifications,['blue','none','blue'])):
         print('blue is blinking!')
-        tweet("I'm full @faraz_r_khan @priyoo! Kitty poops too much")
+        tweeter.tweet("I'm full @faraz_r_khan! Kitty poops too much")
 
       if (detect_pattern(compressed_classifications,['red'], 10)):
         print('red is on')
-        tweet('haha kitty just pooped', 900)
+        tweeter.tweet('haha kitty just pooped', 900)
 
 
 def main(argv):
@@ -462,27 +463,45 @@ def main(argv):
       picamera_loop(model)
 
 last_tweet_sent = 0
-def tweet(message, grace_period=3600):
-  global last_tweet_sent
-  if (time.time() - last_tweet_sent < grace_period):
-    print('not tweeting {} cuz itll be spammy'.format(message))
-    return
-  import twython
-  consumer_key = 'CllP5852kM2hdenx1yRB4g3Pw'
-  consumer_secret = 'LeT0CcYWiD9K2eRrPR3PuoYuJI59ucDAA18ElVkr5S6C5sAa1y'
-  access_token = '891839353843875840-MzhoGUQAwwcFP5CUo71qb42bq15CF6r'
-  access_token_secret = 'kjKnPvVCQbPNfpti1V1J70MW0LocE239EBSnbva4eQXJq'
-  twitter = twython.Twython(
-    consumer_key,
-    consumer_secret,
-    access_token,
-    access_token_secret
-  )
-  try:
-    twitter.update_status(status=message)
-  except:
-    print("twitter error:", sys.exc_info()[0])
-  last_tweet_sent = time.time()
+
+import twython
+import random,string
+
+def randomword(length):
+   return ''.join(random.choice(string.ascii_lowercase) for i in range(length))
+
+class Tweeter:
+  twitter = None
+
+  last_tweet_sent = 0
+
+  def __init__(self):
+    consumer_key = 'CllP5852kM2hdenx1yRB4g3Pw'
+    consumer_secret = 'LeT0CcYWiD9K2eRrPR3PuoYuJI59ucDAA18ElVkr5S6C5sAa1y'
+    access_token = '891839353843875840-MzhoGUQAwwcFP5CUo71qb42bq15CF6r'
+    access_token_secret = 'kjKnPvVCQbPNfpti1V1J70MW0LocE239EBSnbva4eQXJq'
+    self.twitter = twython.Twython(
+      consumer_key,
+      consumer_secret,
+      access_token,
+      access_token_secret
+    )
+    self.tweet('Powering back up')
+    self.last_tweet_sent = 0
+
+  def tweet(self, message, grace_period=3600):
+    if (time.time() - self.last_tweet_sent < grace_period):
+      print('not tweeting {} cuz itll be spammy'.format(message))
+      return
+
+    try:
+      message = '{0} -{1}'.format(message, randomword(3))
+      self.twitter.update_status(status=message)
+    except twython.TwythonError as e:
+      print(e)
+    except:
+      print("twitter error:", sys.exc_info()[0])
+    self.last_tweet_sent = time.time()
 
 if __name__ == "__main__":
   main(sys.argv[1:])
