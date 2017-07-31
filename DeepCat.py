@@ -372,7 +372,6 @@ class Tester:
       dict = ['blue', 'none', 'red', 'yellow']
       o = np.where(out == max(out))
       if (len(o[0]) > 0 and max(out) > 0.75):
-        print('picture is {}, {}'.format(dict[o[0][0]], out))
         classifications.append(dict[o[0][0]])
       else:
         print('weak solution {}'.format(out))
@@ -422,7 +421,6 @@ def picamera_loop(model):
           image = stream.array
           images.append(image)
 
-      print('evaluating batch')
       compressed_classifications = compress(tester.test_images(np.array(images).astype(np.float32)))
       print(compressed_classifications)
 
@@ -430,7 +428,7 @@ def picamera_loop(model):
         print('blue is blinking!')
         tweet("I'm full @faraz_r_khan! Kitty poops too much")
 
-      if (detect_pattern(compressed_classifications,['red','red','red'])):
+      if (detect_pattern(compressed_classifications,['red'], 10)):
         print('red is on')
         tweet('haha kitty just pooped', 900)
 
@@ -465,6 +463,7 @@ def main(argv):
 
 last_tweet_sent = 0
 def tweet(message, grace_period=3600):
+  global last_tweet_sent
   if (time.time() - last_tweet_sent < grace_period):
     print('not tweeting {} cuz itll be spammy'.format(message))
     return
