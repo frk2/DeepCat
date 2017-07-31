@@ -125,7 +125,7 @@ class Processor:
 
 
 def detect_pattern(compressed, pattern, threshold = 3):
-  for i in range(len(compressed) - len(pattern)):
+  for i in range(len(compressed) - len(pattern) + 1):
     match = True
     for j in range(len(pattern)):
       curr_match = compressed[i+j][0] == pattern[j] and compressed[i+j][1] > threshold
@@ -478,7 +478,10 @@ def tweet(message, grace_period=3600):
     access_token,
     access_token_secret
   )
-  twitter.update_status(status=message)
+  try:
+    twitter.update_status(status=message)
+  except:
+    print("twitter error:", sys.exc_info()[0])
   last_tweet_sent = time.time()
 
 if __name__ == "__main__":
