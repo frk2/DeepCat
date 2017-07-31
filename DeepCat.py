@@ -34,6 +34,8 @@ from tqdm import tqdm
 
 def resize_all(imgs):
   new_shape = (imgs.shape[0],) + IMG_SIZE[::-1] + (imgs.shape[3],)
+  if new_shape == imgs.shape:
+    return imgs
   ret_imgs = np.zeros(new_shape)
   for i in range(len(imgs)):
     ret_imgs[i] = cv2.resize(imgs[i], IMG_SIZE[::-1])
@@ -122,7 +124,7 @@ class Processor:
 
 
 def detect_pattern(compressed, pattern, threshold = 3):
-  for i in range(len(compressed)):
+  for i in range(len(compressed) - len(pattern)):
     match = True
     for j in range(len(pattern)):
       curr_match = compressed[i+j][0] == pattern[j] and compressed[i+j][1] > threshold
@@ -145,6 +147,7 @@ def compress(classifications):
         compressed.append((current_class, last_counter))
       current_class = classif
       last_counter = 1
+  compressed.append((current_class, last_counter))
   return compressed
 
 def load():
@@ -375,7 +378,6 @@ class Tester:
     return classifications
 
   def test_images(self, imgs):
-
     return self.predict_color(preprocess_input(resize_all(imgs)))
 
 def test(model, testfile):
@@ -419,7 +421,7 @@ def picamera_loop(model):
           images.append(image)
 
       print('evaluating batch')
-      compressed_classifications = compress(tester.test_images(images))
+      compressed_classifications = compress(tester.test_images(np.array(images).astype(np.float32)))
       print(compressed_classifications)
 
       if (detect_pattern(compressed_classifications,['blue','none','blue'])):
