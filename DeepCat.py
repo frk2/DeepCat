@@ -375,7 +375,6 @@ class Tester:
     return classifications
 
   def test_images(self, imgs):
-
     return self.predict_color(preprocess_input(resize_all(imgs)))
 
 def test(model, testfile):
@@ -409,6 +408,7 @@ def picamera_loop(model):
     # Camera warm-up time
     time.sleep(2)
     v=0
+    tweet('Somebody turned me off @faraz_r_khan. Back now!')
     while (True):
       images = []
       for i in range(20):
@@ -424,7 +424,7 @@ def picamera_loop(model):
 
       if (detect_pattern(compressed_classifications,['blue','none','blue'])):
         print('blue is blinking!')
-        tweet("I'm full! Kitty poops too much")
+        tweet("I'm full @faraz_r_khan! Kitty poops too much")
 
       if (detect_pattern(compressed_classifications,['red','red','red'])):
         print('red is on')
