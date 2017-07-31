@@ -43,7 +43,6 @@ def resize_all(imgs):
   return ret_imgs
 
 def preprocess(img):
-
   # img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
   # img = img[:, :, 2]
   img = cv2.resize(img, IMG_SIZE[::-1])
@@ -71,57 +70,58 @@ def crop_center(img, cropx, cropy, adjx=0, adjy=0):
   return img[starty:starty + cropy, startx:startx + cropx]
 
 
-class Processor:
-  current_label = ''
-  curr_count = 0
-  x_dataset = y_dataset = None
-  h5f = None
-  total_count = 0
-
-  def __init__(self, max=300000):
-    self.h5f = h5py.File('train.h5', 'w', libver='latest')
-    size = (max,) + IMG_SIZE + (3,)
-
-    self.x_dataset = self.h5f.create_dataset('X', size)
-    self.y_dataset = self.h5f.create_dataset('Y', (max,), dtype='S10')
-
-  def set_next_label(self, label):
-    print('{} count: {}'.format(self.current_label, self.curr_count))
-    self.current_label = label
-    self.curr_count = 0
-
-  def processImage(self, mimg):
-    # Generate shit loads of different data
-    min_crop_x = 400
-    min_crop_y = 300
-
-    ar = min_crop_y / min_crop_x
-    step_x = 200
-    cropx = 800
-    cropy = 800
-    adj = [ (-100,-50), (-100,0), (0,0), (100,0), (100,50)]
-    #while (cropx > min_crop_x  and cropy > min_crop_y):
-    for iadj in adj:
-      img = crop_center(mimg, 1000, 1000, iadj[0], iadj[1])
-      # img = crop_leftbottom(mimg, 0, 0, ,900, iadj[0], iadj[1])
-      img = preprocess(img)
-      self.curr_count += 1
-      # plt.imshow(img)
-      # plt.show()
-      self.x_dataset[self.total_count] = img
-      self.y_dataset[self.total_count] = np.string_(self.current_label)
-      self.total_count += 1
-      # cropx -= int(step_x)
-      # cropy -= int(step_x * ar)
-
-    return img
-
-  def write(self):
-    self.x_dataset.attrs['size'] = self.total_count
-    self.y_dataset.attrs['size'] = self.total_count
-    # self.x_dataset.resize(final_size)
-    # self.y_dataset.resize(self.total_count)
-    self.h5f.close()
+# Old data processor now unused.
+# class Processor:
+#   current_label = ''
+#   curr_count = 0
+#   x_dataset = y_dataset = None
+#   h5f = None
+#   total_count = 0
+#
+#   def __init__(self, max=300000):
+#     self.h5f = h5py.File('train.h5', 'w', libver='latest')
+#     size = (max,) + IMG_SIZE + (3,)
+#
+#     self.x_dataset = self.h5f.create_dataset('X', size)
+#     self.y_dataset = self.h5f.create_dataset('Y', (max,), dtype='S10')
+#
+#   def set_next_label(self, label):
+#     print('{} count: {}'.format(self.current_label, self.curr_count))
+#     self.current_label = label
+#     self.curr_count = 0
+#
+#   def processImage(self, mimg):
+#     # Generate shit loads of different data
+#     min_crop_x = 400
+#     min_crop_y = 300
+#
+#     ar = min_crop_y / min_crop_x
+#     step_x = 200
+#     cropx = 800
+#     cropy = 800
+#     adj = [ (-100,-50), (-100,0), (0,0), (100,0), (100,50)]
+#     #while (cropx > min_crop_x  and cropy > min_crop_y):
+#     for iadj in adj:
+#       img = crop_center(mimg, 1000, 1000, iadj[0], iadj[1])
+#       # img = crop_leftbottom(mimg, 0, 0, ,900, iadj[0], iadj[1])
+#       img = preprocess(img)
+#       self.curr_count += 1
+#       # plt.imshow(img)
+#       # plt.show()
+#       self.x_dataset[self.total_count] = img
+#       self.y_dataset[self.total_count] = np.string_(self.current_label)
+#       self.total_count += 1
+#       # cropx -= int(step_x)
+#       # cropy -= int(step_x * ar)
+#
+#     return img
+#
+#   def write(self):
+#     self.x_dataset.attrs['size'] = self.total_count
+#     self.y_dataset.attrs['size'] = self.total_count
+#     # self.x_dataset.resize(final_size)
+#     # self.y_dataset.resize(self.total_count)
+#     self.h5f.close()
 
 
 def detect_pattern(compressed, pattern, threshold = 3):
@@ -133,8 +133,6 @@ def detect_pattern(compressed, pattern, threshold = 3):
     if match:
       return match
   return False
-
-
 
 def compress(classifications):
   compressed = []
@@ -150,33 +148,6 @@ def compress(classifications):
       last_counter = 1
   compressed.append((current_class, last_counter))
   return compressed
-
-def load():
-  if Path('train.h5').is_file():
-    h5f = h5py.File('train.h5', 'r')
-    X = h5f['X']
-    Y = h5f['Y']
-    total = h5f['X'].attrs['size']
-    # total = 40000
-    print('loaded {} images'.format(total))
-    return X,Y,total
-  else:
-
-    clips = [('fullredlong.mp4', 'red'), ('redlong.mp4' , 'red'), ('redcenter.mp4', 'red'), ('fullbluelong.mp4','blue'), ('bluecenter.mp4', 'blue'), ('bluelong.mp4','blue'),
-             ('fullyellowlong.mp4', 'yellow'), ('yellowlong.mp4','yellow'), ('yellowcenter.mp4', 'yellow'),
-             ('fullnonelong.mp4', 'none'), ('nonelong.mp4', 'none')]
-
-    p = Processor()
-
-    for clip in clips:
-      print('Loading data from {} as {}'.format(clip[0], clip[1]))
-      video_clip = VideoFileClip(clip[0])
-      p.set_next_label(clip[1])
-      for frame in tqdm(video_clip.iter_frames()):
-        p.processImage(frame)
-    p.set_next_label('meow')
-    p.write()
-    return p.x_dataset, p.y_dataset, p.total_count
 
 def gen_preprocess(x):
   x = np.expand_dims(x, axis=0)
@@ -229,10 +200,7 @@ def get_model(train=True):
   model = Model(model.inputs, x)
   print(model.summary())
 
-
-  # # 5th Layer - Add a ReLU activation layer
-  # model.add(Activation('softmax'))
-
+  # Following is the original model I was training
   # model = Sequential()
   #
   # model.add(Convolution2D(16, 3, 3,
@@ -309,7 +277,8 @@ def get_model(train=True):
 
 def get_brightness(img):
   hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-  hist = cv2.calcHist(hsv[:,:,2])
+  return np.average(hsv[:,:,2])
+
 def evaluate_model(model, generator):
   from sklearn.metrics import accuracy_score
   steps = 0
@@ -380,7 +349,7 @@ class Tester:
   def test_images(self, imgs):
     return self.predict_color(preprocess_input(resize_all(imgs)))
 
-def test(model, testfile):
+def test_video(model, testfile):
   print('Starting test on {}'.format(testfile))
   clip = VideoFileClip(testfile)
   tester = Tester(model)
@@ -391,14 +360,6 @@ def test(model, testfile):
   print(compressed)
   print(detect_pattern(compressed, ['blue','none','blue']))
   print('**********************************')
-
-def test_images(model):
-  tester = Tester(model)
-  images = glob.glob("test_data/*/*")
-  for i in images:
-    img = cv2.cvtColor(cv2.imread(i), cv2.COLOR_BGR2RGB)
-    print('Testing {}'.format(i))
-    tester.test_image(img)
 
 def picamera_loop(model):
   import time
@@ -448,11 +409,11 @@ def main(argv):
   for opt, arg in opts:
     if opt == '-t':
       model = get_model()
-      test(model, 'testVideos/test_blue_yellow.mp4')
-      test(model, 'testVideos/blinking_yellow.mp4')
-      test(model, 'testVideos/blinking_blue_med.mp4')
-      test(model, 'testVideos/blinking_blue_close.mp4')
-      test(model, 'testVideos/blinking_blue_far.mp4')
+      test_video(model, 'testVideos/test_blue_yellow.mp4')
+      test_video(model, 'testVideos/blinking_yellow.mp4')
+      test_video(model, 'testVideos/blinking_blue_med.mp4')
+      test_video(model, 'testVideos/blinking_blue_close.mp4')
+      test_video(model, 'testVideos/blinking_blue_far.mp4')
       # test_images(model)
       del model
     elif opt == '-c':
@@ -461,8 +422,6 @@ def main(argv):
         print('A client with no model... like a boy who wanders in the forest')
         sys.exit(2)
       picamera_loop(model)
-
-last_tweet_sent = 0
 
 import twython
 import random,string
