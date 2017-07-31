@@ -128,7 +128,7 @@ def detect_pattern(compressed, pattern, threshold = 3):
   for i in range(len(compressed) - len(pattern) + 1):
     match = True
     for j in range(len(pattern)):
-      curr_match = compressed[i+j][0] == pattern[j] and compressed[i+j][1] > threshold
+      curr_match = compressed[i+j][0] == pattern[j] and compressed[i+j][1] >= threshold
       match = match and curr_match
     if match:
       return match
@@ -411,22 +411,22 @@ def picamera_loop(model):
     # Camera warm-up time
     time.sleep(2)
     v=0
-    tweet('Somebody turned me off @faraz_r_khan. Back now!')
     while (True):
       images = []
-      for i in range(20):
+      for i in range(30):
         with picamera.array.PiRGBArray(camera) as stream:
           camera.capture(stream, format='rgb',use_video_port=True)
           # At this point the image is available as stream.array
           image = stream.array
           images.append(image)
+          time.sleep(0.02)
 
       compressed_classifications = compress(tester.test_images(np.array(images).astype(np.float32)))
       print(compressed_classifications)
 
       if (detect_pattern(compressed_classifications,['blue','none','blue'])):
         print('blue is blinking!')
-        tweet("I'm full @faraz_r_khan! Kitty poops too much")
+        tweet("I'm full @faraz_r_khan @priyoo! Kitty poops too much")
 
       if (detect_pattern(compressed_classifications,['red'], 10)):
         print('red is on')
