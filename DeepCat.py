@@ -460,5 +460,4 @@ class Tweeter:
     self.last_tweet_sent = time.time()
 
 if __name__ == "__main__":
-  Tweeter()
   main(sys.argv[1:])
