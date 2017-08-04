@@ -22,7 +22,7 @@ import skimage
 from keras.preprocessing.image import ImageDataGenerator
 from keras_squeezenet import SqueezeNet
 from keras.applications.imagenet_utils import preprocess_input, decode_predictions
-
+import auth
 from keras.applications.imagenet_utils import preprocess_input, decode_predictions
 from keras.preprocessing import image
 
@@ -435,15 +435,12 @@ class Tweeter:
   last_tweet_sent = 0
 
   def __init__(self):
-    consumer_key = 'CllP5852kM2hdenx1yRB4g3Pw'
-    consumer_secret = 'LeT0CcYWiD9K2eRrPR3PuoYuJI59ucDAA18ElVkr5S6C5sAa1y'
-    access_token = '891839353843875840-MzhoGUQAwwcFP5CUo71qb42bq15CF6r'
-    access_token_secret = 'kjKnPvVCQbPNfpti1V1J70MW0LocE239EBSnbva4eQXJq'
+
     self.twitter = twython.Twython(
-      consumer_key,
-      consumer_secret,
-      access_token,
-      access_token_secret
+      auth.CONSUMER_KEY,
+      auth.CONSUMER_SECRET,
+      auth.ACCESS_TOKEN,
+      auth.ACCESS_TOKEN_SECRET
     )
     self.tweet('Powering back up')
     self.last_tweet_sent = 0
@@ -463,4 +460,5 @@ class Tweeter:
     self.last_tweet_sent = time.time()
 
 if __name__ == "__main__":
+  Tweeter()
   main(sys.argv[1:])

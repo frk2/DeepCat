@@ -3,4 +3,5 @@
 train_data/
 valid_data/
 test_data/
+auth.py
 __pycache__
