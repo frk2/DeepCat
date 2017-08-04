@@ -9,6 +9,7 @@ Also - terribly organized code follows so proceed at your own risk. Its a litter
 
 ## Usage
 `python3 DeepCat.py -c` launches the Raspberry Pi camera loop 'client' version
+
 `python3 DeepCat.py -t` launches training if `model.h5` doesn't exist - otherwise runs through tests.
 
 ## Prerequisites
